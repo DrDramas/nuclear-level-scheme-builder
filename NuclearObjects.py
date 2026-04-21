@@ -20,15 +20,34 @@ import networkx as nx
 from textwrap import dedent
 import copy
 
-# ###################################################### #
+# ###################################################### # 
 class LSGraph(object):
+    """Custom graph implementation for nuclear level schemes.
+
+    Represents the decay scheme as an adjacency-list graph where each
+    vertex is a nuclear level energy (float) and edges connect levels
+    that are linked by a gamma-ray transition.
+
+    The class provides path-finding utilities used to enumerate all
+    possible gamma-ray cascades from an excited state to the ground state.
+
+    Parameters
+    ----------
+    graph_dict:
+        Initial adjacency dictionary ``{energy: [neighbour_energies]}``.
+        Defaults to an empty graph.
+    """
 
     def __init__(self, graph_dict=None):
-        #""" initializes a graph object 
-        #    If no dictionary or None is given, 
-        #    an empty dictionary will be used
-        #"""
-        if graph_dict == None:
+        """Initialize a graph object.
+
+        Parameters
+        ----------
+        graph_dict:
+            Adjacency dictionary {vertex: [neighbours]}. If None or
+            omitted, an empty graph is created.
+        """
+        if graph_dict is None:
             graph_dict = {}
         self._graph_dict = graph_dict
 
@@ -66,16 +85,22 @@ class LSGraph(object):
                 self._graph_dict[x] = [y]
 
     def __generate_edges(self):
-        #""" A static method generating the edges of the 
-        #    graph. Edges are represented as sets 
-        #    with one (a loop back to the vertex) or two 
-        #    vertices 
-        #"""
-        edges = []
+        """Generate all unique edges of the graph.
+
+        Returns
+        -------
+        list[frozenset]
+            Each element is a frozenset of one or two vertices
+            representing an edge.
+        """
+        seen: set[frozenset] = set()
+        edges: list[frozenset] = []
         for vertex in self._graph_dict:
             for neighbour in self._graph_dict[vertex]:
-                if {neighbour, vertex} not in edges:
-                    edges.append({vertex, neighbour})
+                fs = frozenset({vertex, neighbour})
+                if fs not in seen:
+                    seen.add(fs)
+                    edges.append(fs)
         return edges
     
     def __iter__(self):
@@ -96,9 +121,23 @@ class LSGraph(object):
         return res
     
     def find_path(self, start_vertex, end_vertex, path=None):
-        #""" find a path from start_vertex to end_vertex 
-        #in graph """
-        if path == None:
+        """Find a path from start_vertex to end_vertex in the graph.
+
+        Parameters
+        ----------
+        start_vertex:
+            Starting node.
+        end_vertex:
+            Target node.
+        path:
+            Accumulated path so far (do not pass — used internally).
+
+        Returns
+        -------
+        list or None
+            First path found, or None if no path exists.
+        """
+        if path is None:
             path = []
         graph = self._graph_dict
         path = path + [start_vertex]
@@ -108,16 +147,32 @@ class LSGraph(object):
             return None
         for vertex in graph[start_vertex]:
             if vertex not in path:
-                extended_path = self.find_path(vertex,end_vertex,path)
-            if extended_path: 
-                return extended_path
+                extended_path = self.find_path(vertex, end_vertex, path)
+                if extended_path:
+                    return extended_path
         return None
 
 
-    def find_all_paths(self, start_vertex, end_vertex, path=[]):
-        #""" find all paths from start_vertex to 
-        #    end_vertex in graph """
-        graph = self._graph_dict 
+    def find_all_paths(self, start_vertex, end_vertex, path=None):
+        """Find all paths from start_vertex to end_vertex in the graph.
+
+        Parameters
+        ----------
+        start_vertex:
+            Starting node.
+        end_vertex:
+            Target node.
+        path:
+            Accumulated path so far (do not pass — used internally).
+
+        Returns
+        -------
+        list[list]
+            All simple paths between the two vertices.
+        """
+        if path is None:
+            path = []
+        graph = self._graph_dict
         path = path + [start_vertex]
         if start_vertex == end_vertex:
             return [path]
@@ -126,14 +181,52 @@ class LSGraph(object):
         paths = []
         for vertex in graph[start_vertex]:
             if vertex not in path:
-                extended_paths = self.find_all_paths(vertex,end_vertex,path)
-                for p in extended_paths: 
+                extended_paths = self.find_all_paths(vertex, end_vertex, path)
+                for p in extended_paths:
                     paths.append(p)
         return paths
 
 # ###################################################### # 
 class Gamma:
-    
+    """Represents a single gamma-ray transition between two nuclear levels.
+
+    Parses a fixed-width formatted line from an IAEA .gam data file and
+    stores the transition's physical properties.
+
+    Parameters
+    ----------
+    line : str
+        A single line from a .gam file.
+
+    Attributes
+    ----------
+    gE : float
+        Gamma-ray energy in keV.
+    gE_err : int
+        Uncertainty on gE (in last digits).
+    RI : float
+        Relative decay intensity.
+    RI_err : int
+        Uncertainty on RI.
+    Multline : str
+        Multipolarity string (e.g. "E1", "M1+E2").
+    CC : float
+        Internal conversion coefficient.
+    ExT : float
+        Excitation energy of the initial (top) nuclear level in keV.
+    SpnT : str
+        Spin-parity of the initial level.
+    ExB : float
+        Excitation energy of the final (bottom) nuclear level in keV.
+    SpnB : str
+        Spin-parity of the final level.
+    BR : float
+        Branching ratio — fraction of decays from ExT that emit this gamma.
+        Set by :meth:`Level.compute_BRs`, not by the constructor.
+    isGam : bool
+        True if the line was successfully parsed as a gamma transition.
+    """
+
     def __init__(self, *args):
 
         line = args[0]
@@ -218,19 +311,52 @@ class Gamma:
         # Branching ratio (to be determined for all gammas at each level)
         self.BR = 0
         
-    def list_values(self):
+    def list_values(self) -> str:
+        """Return a formatted string summarising this gamma-ray transition.
 
-        print("Gamma Ray Transition Info")
-        print("Gamma Energy, Error:",self.gE,self.gE_err)
-        print("Relative Int., Error:",self.RI,self.RI_err)
-        print("Multiploarity, Mixing Ratio:",self.Multline)
-        print("Conversion Coeff., Error:",self.CC,self.CC_err)
-        print("Excitation Energy and Spin of Initial Level:",self.ExT,self.SpnT)
-        print("Excitation Energy and Spin of Final Level:",self.ExB,self.SpnB)
-        print(" ")
+        The string is also printed to stdout for convenience.
+
+        Returns
+        -------
+        str
+            Multi-line summary of the transition's properties.
+        """
+        info = (
+            f"Gamma Ray Transition Info\n"
+            f"  Energy,      error : {self.gE} +/- {self.gE_err}\n"
+            f"  Relative Int, error: {self.RI} +/- {self.RI_err}\n"
+            f"  Multipolarity      : {self.Multline}\n"
+            f"  Conv. Coeff, error : {self.CC} +/- {self.CC_err}\n"
+            f"  Initial level (ExT): {self.ExT}  spin={self.SpnT}\n"
+            f"  Final level   (ExB): {self.ExB}  spin={self.SpnB}\n"
+        )
+        print(info)
+        return info
+
+    def __repr__(self) -> str:
+        return f"Gamma(E={self.gE} keV, RI={self.RI}, ExT={self.ExT}, ExB={self.ExB})"
 
 # ###################################################### #
 class Level:
+    """Represents a single nuclear excited state (energy level).
+
+    Stores all gamma-ray transitions that either populate (incoming)
+    or de-excite (outgoing) this level.
+
+    Parameters
+    ----------
+    ExE : float
+        Excitation energy of this level in keV.
+
+    Attributes
+    ----------
+    ExE : float
+        Excitation energy in keV.
+    outGammas : list[Gamma]
+        Gamma-ray transitions emitted from this level.
+    inGammas : list[Gamma]
+        Gamma-ray transitions that populate this level.
+    """
 
     def __init__(self, *args):
 
@@ -650,9 +776,9 @@ class LevelScheme:
                     elif abs(self.levels[self.rootNodes[i]].ExE-self.levels[self.rootNodes[j]].ExE)<energy_threshold:
                     #elif abs(ls.nodes[rootNodes[i]]['energy']-ls.nodes[rootNodes[j]]['energy'])<energy_threshold:
                         #savedNodes.append(rootNodes[i])
-                        self.redundantNodes.append(rootNodes[j])
+                        self.redundantNodes.append(self.rootNodes[j])
                         for gamma in self.levels[self.rootNodes[j]].outGammas:
-                            self.levels[self.rootNotes[i]].outGammas.append(gamma)
+                            self.levels[self.rootNodes[i]].outGammas.append(gamma)
                             #for gamma in outGammas[rootNodes[j]]:
                             #outGammas[rootNodes[i]].append(gamma)
                         for edge in self.g.edges:

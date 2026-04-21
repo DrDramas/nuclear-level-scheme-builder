@@ -1,5 +1,66 @@
 # scheme-builder-tools
-Sample Code: A subset of the "Level Scheme Numerical Optimization" project, containing tools for parsing the nuclear data files, populating the relevant matrices to simulate real experimental statistics, reconstructing the nuclear level schemes in code, and drawing the graphical representation of these mathematical objects. 
+
+A toolkit for parsing evaluated nuclear data files, constructing gamma-ray decay scheme graphs, and computing the Singles (S), Coincidence (C), and Adjacency (A) matrices used for numerical optimization of nuclear level schemes.
+
+## Quickstart
+
+### Installation
+
+```bash
+git clone https://github.com/<your-username>/scheme-builder-tools.git
+cd scheme-builder-tools
+pip install -r requirements.txt
+```
+
+Requires **Python 3.8+**.
+
+### Run the example notebook
+
+```bash
+jupyter notebook LvlSchemeBuilder.ipynb
+```
+
+### Minimal Python example
+
+```python
+from GetMatricesSCA import MakeLevelsAndVertices, GetSingles, GetCoincidences, GetAdjacency
+
+# Parse a .gam data file and build the level scheme graph
+Glevel = MakeLevelsAndVertices("Ta182_beta.gam")
+
+# Generate matrices (nc = normalization constant / number of counts)
+S = GetSingles(nc=1000)
+C = GetCoincidences(Glevel, nc=1000)
+A = GetAdjacency()
+
+print(f"Loaded {len(S)} gamma-ray transitions")
+print(f"Coincidence matrix shape: {C.shape}")
+print(f"Adjacency matrix shape:   {A.shape}")
+```
+
+### Export matrices to CSV
+
+```python
+import pandas as pd
+from GetMatricesSCA import GetGammaEnergies
+
+energies = GetGammaEnergies()
+pd.DataFrame(C, index=energies, columns=energies).to_csv("C_matrix.csv")
+pd.DataFrame(A, index=energies, columns=energies).to_csv("A_matrix.csv")
+```
+
+### Dependencies
+
+| Package | Purpose |
+|---|---|
+| `numpy` | Matrix arithmetic |
+| `pandas` | Data export |
+| `matplotlib` | Plotting |
+| `networkx` | Graph representation and layout |
+| `scipy` | Numerical optimization (broader project) |
+| `tqdm` | Progress bars for large decay schemes |
+
+---
 
 # A Brief Introduction to Nuclear Terminology
 
