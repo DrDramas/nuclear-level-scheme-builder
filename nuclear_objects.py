@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 """
 Created on Wednesday April 5, 2023
-Last updated on Tuesday, April 11, 2023
+Last updated on Wednesday, April 22, 2026
 
-@author: mcarpenter, tbudner, dlenz
+@author: tbudner, dlenz, mcarpenter
 """
 
 import os
@@ -352,17 +352,17 @@ class Level:
     ----------
     ExE : float
         Excitation energy in keV.
-    outGammas : list[Gamma]
+    out_gammas : list[Gamma]
         Gamma-ray transitions emitted from this level.
-    inGammas : list[Gamma]
+    in_gammas : list[Gamma]
         Gamma-ray transitions that populate this level.
     """
 
     def __init__(self, *args):
 
         self.ExE = args[0]
-        self.outGammas = []   # List of gamma rays emitted from this Level
-        self.inGammas=[] # List of transitions that directly populate this state
+        self.out_gammas = []   # List of gamma rays emitted from this Level
+        self.in_gammas=[] # List of transitions that directly populate this state
         
     def update_excitation_energy(self,exEn):
     
@@ -370,25 +370,25 @@ class Level:
 
     def add_outgoing_gamma(self,gamma):
 
-        self.outGammas.append(gamma)
+        self.out_gammas.append(gamma)
         #print(self.ExE,gamma.gE)
     
     def add_incoming_gamma(self,gamma):
 
-        self.inGammas.append(gamma)
+        self.in_gammas.append(gamma)
         #print(self.ExE,gamma.gE)
 
     def compute_BRs(self):
 
         total = 0
-        for gamma in self.outGammas:
+        for gamma in self.out_gammas:
             total += gamma.RI
-        for gamma in self.outGammas:
+        for gamma in self.out_gammas:
             gamma.BR = gamma.RI/total
 
     def list_gammas(self):
 
-        for gamma in self.outGammas:
+        for gamma in self.out_gammas:
             print("Initial Level:",self.ExE,"Gamma: ",gamma.gE,"Branching Ratio: ",gamma.BR)
             
 # ###################################################### #
@@ -402,14 +402,14 @@ class LevelScheme:
         self.emax = 10000        # This is set for drawing
         self.levels = {}         # Dictionary {Level object : Node #} for LevelScheme
         self.placed = []         # List of gamma-rays that have already been placed in LevelScheme
-        self.redundantNodes = [] # List of nodes that have been placed unnecessarily and have been labeled redundant
-        self.srcToDst = {}       # Dictionary with the form {sourceNode:[destination1,destination2,destination3,...]}
+        self.dummy_nodes = [] # List of nodes that have been placed unnecessarily and have been labeled redundant
+        self.src_to_dst = {}       # Dictionary with the form {sourceNode:[destination1,destination2,destination3,...]}
         self.cascade = {}        # Dict {(source,destination):[pathway1,pathway2,pathway3,...]}; pathways are lists of gammas
-        self.pathLengths = {}    # Dict {(source,destination):[length1,length2,length3,...]}; lengths are summed gamma energies
+        self.path_lengths = {}    # Dict {(source,destination):[length1,length2,length3,...]}; lengths are summed gamma energies
         self.savedNodes = []
-        self.redundantEdges = []
-        self.leafNodes = []
-        self.rootNodes = []
+        self.dummy_edges = []
+        self.leaf_nodes = []
+        self.root_nodes = []
         
     def __str__(self):
 
@@ -438,20 +438,20 @@ class LevelScheme:
                 #print('-----Scenario 1------')
                 # Add lowest level
                 newLvl=Level(0.1)
-                #newLvl.inGammas.append(edge[1])
-                newLvl.inGammas.append(TS.g.nodes[edge[1]]['Gamma'])
+                #newLvl.in_gammas.append(edge[1])
+                newLvl.in_gammas.append(TS.g.nodes[edge[1]]['Gamma'])
                 self.add_level(newLvl)
                 # Add middle level
                 newLvl=Level(0.1)
-                #newLvl.inGammas.append(edge[0])
-                newLvl.inGammas.append(TS.g.nodes[edge[0]]['Gamma'])
-                #newLvl.outGammas.append(edge[1])
-                newLvl.outGammas.append(TS.g.nodes[edge[1]]['Gamma'])
+                #newLvl.in_gammas.append(edge[0])
+                newLvl.in_gammas.append(TS.g.nodes[edge[0]]['Gamma'])
+                #newLvl.out_gammas.append(edge[1])
+                newLvl.out_gammas.append(TS.g.nodes[edge[1]]['Gamma'])
                 self.add_level(newLvl)
                 # Add highest level
                 newLvl=Level(0.1)
-                #newLvl.outGammas.append(edge[0])
-                newLvl.outGammas.append(TS.g.nodes[edge[0]]['Gamma'])
+                #newLvl.out_gammas.append(edge[0])
+                newLvl.out_gammas.append(TS.g.nodes[edge[0]]['Gamma'])
                 self.add_level(newLvl)
                 # Add both transitions' energies to list of gammas placed in level scheme
                 self.placed.append(edge[0])
@@ -460,12 +460,12 @@ class LevelScheme:
             elif edge[0] in self.placed and edge[1] not in self.placed:
                 #print('-----Scenario 2------')
                 for lvl in self.levels:
-                    if TS.g.nodes[edge[0]]['Gamma'] in self.levels[lvl].inGammas:
-                        #lvl.outGammas.append(edge[1]) # Add to existing list of outgoing gamma rays
-                        self.levels[lvl].outGammas.append(TS.g.nodes[edge[1]]['Gamma'])
+                    if TS.g.nodes[edge[0]]['Gamma'] in self.levels[lvl].in_gammas:
+                        #lvl.out_gammas.append(edge[1]) # Add to existing list of outgoing gamma rays
+                        self.levels[lvl].out_gammas.append(TS.g.nodes[edge[1]]['Gamma'])
                         newLvl=Level(0.1) # Add new level to LevelScheme
-                        #newLvl.inGammas.append(edge[1]) # Add previously unseen transition to list of incoming gamma rays
-                        newLvl.inGammas.append(TS.g.nodes[edge[1]]['Gamma'])
+                        #newLvl.in_gammas.append(edge[1]) # Add previously unseen transition to list of incoming gamma rays
+                        newLvl.in_gammas.append(TS.g.nodes[edge[1]]['Gamma'])
                         self.add_level(newLvl)
                         self.placed.append(edge[1]) # Add transition energy to list of placed gamma-rays
                         break
@@ -474,12 +474,12 @@ class LevelScheme:
             elif edge[1] in self.placed and edge[0] not in self.placed:
                 #print('-----Scenario 3------')
                 for lvl in self.levels:
-                    if TS.g.nodes[edge[1]]['Gamma'] in self.levels[lvl].outGammas:
-                        #lvl.inGammas.append(edge[0]) # Add to existing list of incoming gamma rays
-                        self.levels[lvl].inGammas.append(TS.g.nodes[edge[0]]['Gamma'])
+                    if TS.g.nodes[edge[1]]['Gamma'] in self.levels[lvl].out_gammas:
+                        #lvl.in_gammas.append(edge[0]) # Add to existing list of incoming gamma rays
+                        self.levels[lvl].in_gammas.append(TS.g.nodes[edge[0]]['Gamma'])
                         newLvl=Level(0.1) # Add new level to LevelScheme
-                        #newLvl.outGammas.append(edge[0]) # Add previously unseen transition to list of outgoing gamma rays
-                        newLvl.outGammas.append(TS.g.nodes[edge[0]]['Gamma'])
+                        #newLvl.out_gammas.append(edge[0]) # Add previously unseen transition to list of outgoing gamma rays
+                        newLvl.out_gammas.append(TS.g.nodes[edge[0]]['Gamma'])
                         self.add_level(newLvl)
                         self.placed.append(edge[0]) # Add transition to list of placed gamma-rays
                         break
@@ -489,15 +489,15 @@ class LevelScheme:
                 #print('-----Scenario 4------')
                 #print('Gammas placed already: ',edge[0],edge[1])
                 for lvl in self.levels:
-                    #if edge[0] in lvl.inGammas: # Find level which the edge[0] gamma populates
-                    if TS.g.nodes[edge[0]]['Gamma'] in self.levels[lvl].inGammas:
+                    #if edge[0] in lvl.in_gammas: # Find level which the edge[0] gamma populates
+                    if TS.g.nodes[edge[0]]['Gamma'] in self.levels[lvl].in_gammas:
                         e0=lvl
                         #print('Level ',e0,' has incoming gamma ',edge[0])
                         break
                         
                 for lvl in self.levels:
-                    #if edge[1] in lvl.outGammas: # Find level that emits the edge[1] gamma
-                    if TS.g.nodes[edge[1]]['Gamma'] in self.levels[lvl].outGammas:
+                    #if edge[1] in lvl.out_gammas: # Find level that emits the edge[1] gamma
+                    if TS.g.nodes[edge[1]]['Gamma'] in self.levels[lvl].out_gammas:
                         e1=lvl
                         #print('Level ',e1,' has outgoing gamma ',edge[1])
                         break
@@ -507,55 +507,55 @@ class LevelScheme:
                 if e0==e1:  # If these levels are the same, good. Move on to the next edge
                     continue
                 else:  # Levels have been improperly duplicated. Remove the one more recently placed
-                    for gamma in self.levels[e1].inGammas: # Copy incoming gammes for redundant node/level
-                        if gamma not in self.levels[e0].inGammas:
-                            self.levels[e0].inGammas.append(gamma) # Add them to existing node/level
-                    self.levels[e1].inGammas.clear() # Delete this list so we don't accidentally reference redundant node/level
-                    for gamma in self.levels[e1].outGammas: # Copy outgoing gammes from redundant node/level
-                        if gamma not in self.levels[e0].outGammas: 
-                            self.levels[e0].outGammas.append(gamma) # Add them to existing node/level
-                    self.levels[e1].outGammas.clear() # Delete this list so we don't accidentally reference redundant node/level
-                    if e1 not in self.redundantNodes:
-                        self.redundantNodes.append(e1) # Add to list of redundant nodes
+                    for gamma in self.levels[e1].in_gammas: # Copy incoming gammes for redundant node/level
+                        if gamma not in self.levels[e0].in_gammas:
+                            self.levels[e0].in_gammas.append(gamma) # Add them to existing node/level
+                    self.levels[e1].in_gammas.clear() # Delete this list so we don't accidentally reference redundant node/level
+                    for gamma in self.levels[e1].out_gammas: # Copy outgoing gammes from redundant node/level
+                        if gamma not in self.levels[e0].out_gammas: 
+                            self.levels[e0].out_gammas.append(gamma) # Add them to existing node/level
+                    self.levels[e1].out_gammas.clear() # Delete this list so we don't accidentally reference redundant node/level
+                    if e1 not in self.dummy_nodes:
+                        self.dummy_nodes.append(e1) # Add to list of redundant nodes
                         
     
     def connect_nodes_with_edges(self):
         
         for loLvl in self.levels:
-            for gamma in self.levels[loLvl].inGammas:
+            for gamma in self.levels[loLvl].in_gammas:
                 for hiLvl in self.levels:
-                    if gamma in self.levels[hiLvl].outGammas:
+                    if gamma in self.levels[hiLvl].out_gammas:
                         self.g.add_edge(hiLvl,loLvl,energy=gamma.gE,weight=gamma.BR)
         
     def delete_edges_and_nodes(self):
         
-        for edge in self.redundantEdges:
+        for edge in self.dummy_edges:
             self.g.remove_edge(edge[0],edge[1]) # Delete edge from graph
-        self.redundantEdges.clear() # Once redundancies have been remove, empty the list of edges/nodes
-        for node in self.redundantNodes:
+        self.dummy_edges.clear() # Once redundancies have been remove, empty the list of edges/nodes
+        for node in self.dummy_nodes:
             self.g.remove_node(node) # Delete node from graph
             self.levels.pop(node) # Remove this Level from dictionaroy
-        self.redundantNodes.clear()
+        self.dummy_nodes.clear()
             
     def build_gamma_cascades(self,TS):
     
-        for path in TS.allPaths:                 # Loop over all possible gamma-ray transition sequences
+        for path in TS.all_paths:                 # Loop over all possible gamma-ray transition sequences
             for lvl in self.levels:              # Loop over levels/nodes in the level scheme space
-                if TS.g.nodes[path[0]]['Gamma'] in self.levels[lvl].outGammas: # If first transition in path is an outgoing gamma of Level 
+                if TS.g.nodes[path[0]]['Gamma'] in self.levels[lvl].out_gammas: # If first transition in path is an outgoing gamma of Level 
                     start_lvl=lvl             # This is the starting level
                     #print('Start level: ',start_lvl)
                     break
             for lvl in self.levels:
-                if TS.g.nodes[path[len(path)-1]]['Gamma'] in self.levels[lvl].inGammas: # If last transition in path is incoming gamma...
+                if TS.g.nodes[path[len(path)-1]]['Gamma'] in self.levels[lvl].in_gammas: # If last transition in path is incoming gamma...
                     stop_lvl=lvl                       # This is the stopping level
                     #print('Stop level: ',stop_lvl)
                     break
         
-            if start_lvl not in self.srcToDst:            # If the source level hasn't been added yet
-                self.srcToDst.update({start_lvl:[]})      # Update the dictionary
-                self.srcToDst[start_lvl].append(stop_lvl) # Add final level to list of possible destination levels
+            if start_lvl not in self.src_to_dst:            # If the source level hasn't been added yet
+                self.src_to_dst.update({start_lvl:[]})      # Update the dictionary
+                self.src_to_dst[start_lvl].append(stop_lvl) # Add final level to list of possible destination levels
             else:                                    
-                self.srcToDst[start_lvl].append(stop_lvl)
+                self.src_to_dst[start_lvl].append(stop_lvl)
         
             start_stop=(start_lvl,stop_lvl) # Declare tuple that specifies endpoints of transition pathway
             if start_stop not in self.cascade:   # If these end points have not been added to the cascade yet
@@ -567,24 +567,24 @@ class LevelScheme:
     def compute_path_lengths(self,energy_threshold=1):
         
         for start_stop in self.cascade: # Loop over all pairs of starting/stopping levels in cascade dictionary
-            self.pathLengths.update({start_stop:[]})
+            self.path_lengths.update({start_stop:[]})
             for pathway in self.cascade[start_stop]: # Loop over all pathways for a given pair of endpoints
                 sumEnergy=0
                 for gammaEnergy in pathway: # Loop over all gamma-rays within a given pathway
                     sumEnergy += gammaEnergy # Sum up the total energy between the source and destination levels
-                self.pathLengths[start_stop].append(sumEnergy) # Add sum of gamma energies to the distance between two Levels
+                self.path_lengths[start_stop].append(sumEnergy) # Add sum of gamma energies to the distance between two Levels
                 
-        for start_stop in self.pathLengths:
-            for i in range(len(self.pathLengths[start_stop])-1):
-                for j in range(i+1,len(self.pathLengths[start_stop])):
-                    if abs(self.pathLengths[start_stop][i]-self.pathLengths[start_stop][j])>energy_threshold:
+        for start_stop in self.path_lengths:
+            for i in range(len(self.path_lengths[start_stop])-1):
+                for j in range(i+1,len(self.path_lengths[start_stop])):
+                    if abs(self.path_lengths[start_stop][i]-self.path_lengths[start_stop][j])>energy_threshold:
                         print('ERROR: path lenghts differ by more than energy threshold')
             sumEnergy=0
-            for length in self.pathLengths[start_stop]:
+            for length in self.path_lengths[start_stop]:
                 sumEnergy += length
-            meanEnergy=sumEnergy/len(self.pathLengths[start_stop])
-            self.pathLengths[start_stop].clear()
-            self.pathLengths.update({start_stop:meanEnergy})        
+            meanEnergy=sumEnergy/len(self.path_lengths[start_stop])
+            self.path_lengths[start_stop].clear()
+            self.path_lengths.update({start_stop:meanEnergy})        
 
     def merge_redundant_leaves(self,energy_threshold=1):
         
@@ -592,55 +592,55 @@ class LevelScheme:
         gEnergies = []    # List of gamma energies that should be assigned to the new edges
         gWeights = [] # List of gamma intensities that should be assigned to the new edges
         
-        for src in self.srcToDst: # Loop over all starting Levels
+        for src in self.src_to_dst: # Loop over all starting Levels
         
-            if len(self.srcToDst[src])>1: # If the number of possible destination Levels is greater than one...
-                for i in range(len(self.srcToDst[src])-1): 
-                    #print('Node i: ',srcToDst[src][i])
-                    if self.srcToDst[src][i] in self.redundantNodes: # If ith node has been labeled redundant, skip it
+            if len(self.src_to_dst[src])>1: # If the number of possible destination Levels is greater than one...
+                for i in range(len(self.src_to_dst[src])-1): 
+                    #print('Node i: ',src_to_dst[src][i])
+                    if self.src_to_dst[src][i] in self.dummy_nodes: # If ith node has been labeled redundant, skip it
                         continue
-                    for j in range(i+1,len(self.srcToDst[src])):
-                        #print('Node j: ',srcToDst[src][j])
-                        if self.srcToDst[src][i] in self.redundantNodes: # If jth node has been labeled redundant, skip it
+                    for j in range(i+1,len(self.src_to_dst[src])):
+                        #print('Node j: ',src_to_dst[src][j])
+                        if self.src_to_dst[src][i] in self.dummy_nodes: # If jth node has been labeled redundant, skip it
                             continue
                         
-            #if len(srcToDst[src])==2:
-                        dsti=self.srcToDst[src][i] # ith leaf node
-                        dstj=self.srcToDst[src][j] # jth leaf node
+            #if len(src_to_dst[src])==2:
+                        dsti=self.src_to_dst[src][i] # ith leaf node
+                        dstj=self.src_to_dst[src][j] # jth leaf node
                         if dsti==dstj: # Both paths lead to the same Level
                             #if lvlEnergies[(src,dsti)]!=lvlEnergies[(src,dstj)]: # If sum of gamma energies differ
-                            if abs(self.pathLengths[(src,dsti)]-self.pathLengths[(src,dstj)])>energy_threshold:
+                            if abs(self.path_lengths[(src,dsti)]-self.path_lengths[(src,dstj)])>energy_threshold:
                                 print('ERROR: Gamma energies do not sum to same level energy!')
                             else: # If they're the same, nothing to see here. What you'd expect
                                 continue
                         else: # Both paths lead to different nodes
                             #if lvlEnergies[(src,dsti)]!=lvlEnergies[(src,dstj)]: # If sum of gamma energies differ
                             #if abs(lvlEnergies[(src,dsti)]-lvlEnergies[(src,dstj)])>energy_threshold:
-                            if abs(self.pathLengths[(src,dsti)]-self.pathLengths[(src,dstj)])>energy_threshold:
+                            if abs(self.path_lengths[(src,dsti)]-self.path_lengths[(src,dstj)])>energy_threshold:
                                 continue # This is what you'd expect. One of these levels isn't the ground state
                             else: # Nodes have the same sum of gamma energies
                                 self.savedNodes.append(dsti) # List of nodes that duplicates but should be preserved
-                                #if dstj not in redundantNodes and dstj not in savedNodes:
-                                if dstj not in self.redundantNodes:
-                                    self.redundantNodes.append(dstj) # List of redundant nodes to be deleted
-                                #for gamma in inGammas[dstj]:
-                                for gamma in self.levels[dstj].inGammas:
-                                    #if gamma not in inGammas[dsti]:
-                                    if gamma not in self.levels[dsti].inGammas:
-                                        #inGammas[dsti].append(gamma)
-                                        self.levels[dsti].inGammas.append(gamma)
+                                #if dstj not in dummy_nodes and dstj not in savedNodes:
+                                if dstj not in self.dummy_nodes:
+                                    self.dummy_nodes.append(dstj) # List of redundant nodes to be deleted
+                                #for gamma in in_gammas[dstj]:
+                                for gamma in self.levels[dstj].in_gammas:
+                                    #if gamma not in in_gammas[dsti]:
+                                    if gamma not in self.levels[dsti].in_gammas:
+                                        #in_gammas[dsti].append(gamma)
+                                        self.levels[dsti].in_gammas.append(gamma)
                                 #else: # Already marked as a redundant node
                                 #    continue
                                 # Should be no outgoing gammas  in this leaf node
-                                #for gamma in outGammas[e1]:
-                                #    if gamma not in outGammas[e0]:
-                                #        outGammas[e0].append(gamma)
+                                #for gamma in out_gammas[e1]:
+                                #    if gamma not in out_gammas[e0]:
+                                #        out_gammas[e0].append(gamma)
                                 #for edge in ls.edges:
                                 for edge in self.g.edges:
                                     #if edge[1]==dstj: # and dstj not in savedNodes: # If edge contains redundant leaf node...
                                     if edge[1]==dstj:
-                                        if edge not in self.redundantEdges:
-                                            self.redundantEdges.append(edge)
+                                        if edge not in self.dummy_edges:
+                                            self.dummy_edges.append(edge)
                                             #gamEn=ls[edge[0]][dstj]
                                             gamEn=self.g.edges[edge]['energy']
                                             #gamEn=gamEn['energy']
@@ -664,28 +664,28 @@ class LevelScheme:
                         
     def find_leaf_nodes(self):
         
-        self.leafNodes.clear()
+        self.leaf_nodes.clear()
         for lvl in self.levels: # Loop over all Levels in the LevelScheme
-            if len(self.levels[lvl].outGammas)<1: # If the number of outgoing gammas from a level is zero...
-                self.leafNodes.append(lvl) # Find its node number and add to the list of leaf nodes
+            if len(self.levels[lvl].out_gammas)<1: # If the number of outgoing gammas from a level is zero...
+                self.leaf_nodes.append(lvl) # Find its node number and add to the list of leaf nodes
                 
     
     def leaf_node_deexcitation_energies(self):
         
         deexcitationEnergies = {}
-        for node in self.leafNodes: # Loop over all potential ground states (i.e. leaf nodes)
+        for node in self.leaf_nodes: # Loop over all potential ground states (i.e. leaf nodes)
             maxEnergy=0
-            for start_stop in self.pathLengths: 
+            for start_stop in self.path_lengths: 
                 if node==start_stop[1]: # If the stop node is a leaf node...
-                    if self.pathLengths[start_stop]>maxEnergy: # Check if this is the largest deexcitation energy
-                        maxEnergy=self.pathLengths[start_stop]
+                    if self.path_lengths[start_stop]>maxEnergy: # Check if this is the largest deexcitation energy
+                        maxEnergy=self.path_lengths[start_stop]
             deexcitationEnergies.update({start_stop:maxEnergy})
         print('Maximum energy lost when populating leaf nodes: ',deexcitationEnergies)
         
     def leaf_node_incoming_intensity(self,gammas,S):
         
         incomingIntensities = {}
-        for node in self.leafNodes:
+        for node in self.leaf_nodes:
             gFlow=0
             for edge in self.g.edges:
                 if edge[1]==node:
@@ -704,7 +704,7 @@ class LevelScheme:
     def find_ground_state(self,gammas,S):
         
         gamFlows={}
-        for node in self.leafNodes:
+        for node in self.leaf_nodes:
             gFlow=0
             for edge in self.g.edges:
                 if edge[1]==node:
@@ -723,18 +723,18 @@ class LevelScheme:
         
     def find_root_nodes(self):
         
-        self.rootNodes.clear()
+        self.root_nodes.clear()
         for lvl in self.levels: # Loop over all Levels in the LevelScheme
-            if len(self.levels[lvl].inGammas)<1: # If the number of incoming gammas to this Level is zero...
-                self.rootNodes.append(lvl) # Find its node number and add to the list of root nodes
+            if len(self.levels[lvl].in_gammas)<1: # If the number of incoming gammas to this Level is zero...
+                self.root_nodes.append(lvl) # Find its node number and add to the list of root nodes
                 
-    def compute_level_energies(self,gsNode):
+    def compute_level_energies(self,gs_node):
         
-        self.g.nodes[gsNode]['energy']=0.0 # Set energy of the ground state node to 0.0 keV 
-        self.levels[gsNode].update_excitation_energy(0.0) # Update ground-state Level's excitation energy to 0.0 keV
+        self.g.nodes[gs_node]['energy']=0.0 # Set energy of the ground state node to 0.0 keV 
+        self.levels[gs_node].update_excitation_energy(0.0) # Update ground-state Level's excitation energy to 0.0 keV
               
         eAssigned = [] # List of nodes that have been assigned energies
-        eAssigned.append(gsNode) # Add ground-state node to the list
+        eAssigned.append(gs_node) # Add ground-state node to the list
         iteration=0 # Counts the number of iterations in while loop
         maxIter=10  # Used as break condition to avoid infinite loop
         
@@ -765,30 +765,30 @@ class LevelScheme:
         gEnergies = []    # List of gamma energies that should be assigned to the new edges
         gWeights = [] # List of gamma intensities that should be assigned to the new edges
         
-        for i in range(len(self.rootNodes)):         
+        for i in range(len(self.root_nodes)):         
     
-            if self.rootNodes[i] in self.redundantNodes:
+            if self.root_nodes[i] in self.dummy_nodes:
                 continue
             else:
-                for j in range(i+1,len(self.rootNodes)):
-                    if self.rootNodes[j] in self.redundantNodes:
+                for j in range(i+1,len(self.root_nodes)):
+                    if self.root_nodes[j] in self.dummy_nodes:
                         continue
-                    elif abs(self.levels[self.rootNodes[i]].ExE-self.levels[self.rootNodes[j]].ExE)<energy_threshold:
-                    #elif abs(ls.nodes[rootNodes[i]]['energy']-ls.nodes[rootNodes[j]]['energy'])<energy_threshold:
-                        #savedNodes.append(rootNodes[i])
-                        self.redundantNodes.append(self.rootNodes[j])
-                        for gamma in self.levels[self.rootNodes[j]].outGammas:
-                            self.levels[self.rootNodes[i]].outGammas.append(gamma)
-                            #for gamma in outGammas[rootNodes[j]]:
-                            #outGammas[rootNodes[i]].append(gamma)
+                    elif abs(self.levels[self.root_nodes[i]].ExE-self.levels[self.root_nodes[j]].ExE)<energy_threshold:
+                    #elif abs(ls.nodes[root_nodes[i]]['energy']-ls.nodes[root_nodes[j]]['energy'])<energy_threshold:
+                        #savedNodes.append(root_nodes[i])
+                        self.dummy_nodes.append(self.root_nodes[j])
+                        for gamma in self.levels[self.root_nodes[j]].out_gammas:
+                            self.levels[self.root_nodes[i]].out_gammas.append(gamma)
+                            #for gamma in out_gammas[root_nodes[j]]:
+                            #out_gammas[root_nodes[i]].append(gamma)
                         for edge in self.g.edges:
                             if edge[0]==rootNotes[j]:
-                                self.redundantEdges.append(edge)
+                                self.dummy_edges.append(edge)
                                 gamEn=self.g.edges[edge]['energy']
                                 gEnergies.append(gamEn)
                                 gamBR=self.g.edges[edge]['weight']
                                 gWeights.append(gamBR)
-                                newEdge=(rootNodes[i],edge[1])
+                                newEdge=(root_nodes[i],edge[1])
                                 updatedEdges.append(newEdge)
         
         g=0 # Index counter for gamma-ray energies/branching ratios
@@ -901,7 +901,7 @@ class LevelScheme:
         self.nt=self.g.number_of_edges()
         #print('Initial: ',initial,'; Final: ',final)
         
-        #maxE = max(outGammas)
+        #maxE = max(out_gammas)
         #self.g.add_node(self.nl,maxE)
         
 # ###################################################### # 
@@ -911,12 +911,12 @@ class TransitionScheme:
 
         self.nt = 0           # Total number of transitions in scheme
         self.g = nx.DiGraph() # Directed graph object used to represent TransitionScheme
-        self.adjDict={}       # Dictionary of adjacent gamma transitions
+        self.adjacency={}       # Dictionary of adjacent gamma transitions
         self.nodeDict={}      # Dictionary where key is Node # and definition is Gamma object 
-        self.leafNodes=[]     # List of all leaf nodes in the TransitionScheme
-        self.branchNodes=[]   # List of all branch nodes in the TransitionScheme
-        self.gamEnergies=[]   # List of all gamma-ray energies; might replace this with list of Gamma objects
-        self.allPaths=[]      # List of all possible transition pathways between two nodes in gamma cascade
+        self.leaf_nodes=[]     # List of all leaf nodes in the TransitionScheme
+        self.branch_nodes=[]   # List of all branch nodes in the TransitionScheme
+        self.gamma_energies=[]   # List of all gamma-ray energies; might replace this with list of Gamma objects
+        self.all_paths=[]      # List of all possible transition pathways between two nodes in gamma cascade
 
     def __str__(self):
 
@@ -925,7 +925,7 @@ class TransitionScheme:
     
     def build_from_adjacency_matrix(self,adjMatrix,intensity_threshold,gammas):
         
-        self.gamEnergies=gammas
+        self.gamma_energies=gammas
         for i in range(len(adjMatrix[0])): # Loop over rows in adjacency matrix
             leaf=True # Is this a leaf node?
             for j in range(len(adjMatrix[0])): # Loop over columns in adjacency matrix
@@ -934,18 +934,18 @@ class TransitionScheme:
                     continue # Keep looping
                 else: # Adjacent transitions found!
                     leaf=False
-                    if gammas[i].gE not in self.adjDict: # Gamma not placed in transition scheme yet
-                        self.branchNodes.append(gammas[i].gE)  # Add to list of branch nodes
-                        self.adjDict.update({gammas[i].gE:[]}) # Add gamma energy to dictionary of adjacent transitions
-                    self.adjDict[gammas[i].gE].append(gammas[j].gE) # Add jth gamma to ith gamma's list of adjacent transitions
+                    if gammas[i].gE not in self.adjacency: # Gamma not placed in transition scheme yet
+                        self.branch_nodes.append(gammas[i].gE)  # Add to list of branch nodes
+                        self.adjacency.update({gammas[i].gE:[]}) # Add gamma energy to dictionary of adjacent transitions
+                    self.adjacency[gammas[i].gE].append(gammas[j].gE) # Add jth gamma to ith gamma's list of adjacent transitions
                     self.g.add_node(gammas[i].gE,Gamma=gammas[i]) # Add ith node to directed graph of TransitionScheme
                     self.g.add_node(gammas[j].gE,Gamma=gammas[j]) # Add jth node to directed graph of TransitionScheme
                     self.g.add_edge(gammas[i].gE,gammas[j].gE,weight=adjMatrix[i][j])
             if leaf==True: # If after looping over all columns leaf is still true...
-                self.leafNodes.append(gammas[i].gE) # Add to list of leaf nodes
-                self.adjDict.update({gammas[i].gE:[]}) # Add gamma to dictionary
+                self.leaf_nodes.append(gammas[i].gE) # Add to list of leaf nodes
+                self.adjacency.update({gammas[i].gE:[]}) # Add gamma to dictionary
                 self.g.add_node(gammas[i].gE,Gamma=gammas[i]) # Add ith node to directed graph of TransitionScheme
-        print(self.adjDict)
+        print(self.adjacency)
         
     def find_all_paths(self,source,destination):
         # Clear previously stored paths
@@ -960,18 +960,18 @@ class TransitionScheme:
         #self.Print ()
         
     def print_paths(self):
-        # print (self.allpaths)
-        for path in self.allPaths:
+        # print (self.all_paths)
+        for path in self.all_paths:
             print("Path : " + str(path))
-        #self.allpaths.clear()
+        #self.all_paths.clear()
         
     # This function uses DFS at its core to find all the paths in a graph
     #def DFS (self, adjlist : Dict[int, List[int]], src : int, dst : int, path : List[int]):
     def depth_first_search(self,source,destination,path):
         if source==destination:
-            self.allPaths.append(copy.deepcopy(path))
+            self.all_paths.append(copy.deepcopy(path))
         else:
-            for adjNode in self.adjDict[source]:
+            for adjNode in self.adjacency[source]:
                 path.append(adjNode)
                 self.depth_first_search(adjNode,destination,path)
                 path.pop()  

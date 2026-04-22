@@ -23,15 +23,15 @@ jupyter notebook LvlSchemeBuilder.ipynb
 ### Minimal Python example
 
 ```python
-from GetMatricesSCA import MakeLevelsAndVertices, GetSingles, GetCoincidences, GetAdjacency
+from get_sca_matrices import make_levels_and_vertices, get_singles, get_coincidences, get_adjacency
 
 # Parse a .gam data file and build the level scheme graph
-Glevel = MakeLevelsAndVertices("Ta182_beta.gam")
+Glevel = make_levels_and_vertices("Ta182_beta.gam")
 
 # Generate matrices (nc = normalization constant / number of counts)
-S = GetSingles(nc=1000)
-C = GetCoincidences(Glevel, nc=1000)
-A = GetAdjacency()
+S = get_singles(nc=1000)
+C = get_coincidences(Glevel, nc=1000)
+A = get_adjacency()
 
 print(f"Loaded {len(S)} gamma-ray transitions")
 print(f"Coincidence matrix shape: {C.shape}")
@@ -42,9 +42,9 @@ print(f"Adjacency matrix shape:   {A.shape}")
 
 ```python
 import pandas as pd
-from GetMatricesSCA import GetGammaEnergies
+from get_sca_matrices import get_gamma_energies
 
-energies = GetGammaEnergies()
+energies = get_gamma_energies()
 pd.DataFrame(C, index=energies, columns=energies).to_csv("C_matrix.csv")
 pd.DataFrame(A, index=energies, columns=energies).to_csv("A_matrix.csv")
 ```

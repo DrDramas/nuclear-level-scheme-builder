@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-GetMatricesSCA.py
+get_sca_matrices.py
 
 Parses nuclear gamma-ray data files and constructs the level scheme graph,
 then generates the Singles (S), Coincidence (C), and Adjacency (A) matrices
@@ -38,11 +38,11 @@ try:
 except ImportError:
     _HAS_TQDM = False
 
-from NuclearObjects import LSGraph, Gamma, Level
+from nuclear_objects import LSGraph, Gamma, Level
 
 logger = logging.getLogger(__name__)
 
-# Module-level state — populated by MakeLevelsAndVertices()
+# Module-level state — populated by make_levels_and_vertices()
 gammas: list[Gamma] = []
 levels: list[Level] = []
 gammaIDs: dict[float, int] = {}   # {gamma energy: index in gammas}
@@ -51,7 +51,7 @@ vertices: dict[float, list[float]] = {}
 
 
 # ------------------------------------------------------------------ #
-def MakeLevelsAndVertices(fname: str) -> LSGraph:
+def make_levels_and_vertices(fname: str) -> LSGraph:
     """Parse a .gam gamma-ray data file and build the level scheme graph.
 
     Populates the module-level ``gammas``, ``levels``, ``gammaIDs``,
@@ -103,19 +103,19 @@ def MakeLevelsAndVertices(fname: str) -> LSGraph:
 
 
 # ------------------------------------------------------------------ #
-def GetGammaEnergies() -> list[float]:
+def get_gamma_energies() -> list[float]:
     """Return a list of all gamma-ray energies in the order they were loaded."""
     return [gam.gE for gam in gammas]
 
 
 # ------------------------------------------------------------------ #
-def GetGammaObjects() -> list[Gamma]:
+def get_gamma_objects() -> list[Gamma]:
     """Return the list of Gamma objects populated by MakeLevelsAndVertices."""
     return gammas
 
 
 # ------------------------------------------------------------------ #
-def GetSingles(nc: float = 1.0) -> list[float]:
+def get_singles(nc: float = 1.0) -> list[float]:
     """Return the singles intensity vector.
 
     Parameters
@@ -132,7 +132,7 @@ def GetSingles(nc: float = 1.0) -> list[float]:
 
 
 # ------------------------------------------------------------------ #
-def GetCoincidences(Glevel: LSGraph, nc: float = 1.0) -> np.ndarray:
+def get_coincidences(Glevel: LSGraph, nc: float = 1.0) -> np.ndarray:
     """Compute the gamma-gamma coincidence matrix.
 
     For each nuclear level, all possible decay pathways to the ground
@@ -179,7 +179,7 @@ def GetCoincidences(Glevel: LSGraph, nc: float = 1.0) -> np.ndarray:
             for i in range(1, len(path)):
                 # O(1) level lookup via dict instead of linear scan
                 lvl_id = levelIDs[path[i - 1]]
-                for gam in levels[lvl_id].outGammas:
+                for gam in levels[lvl_id].out_gammas:
                     if gam.ExB == path[i]:
                         glst.append(gam)
                         break
@@ -214,7 +214,7 @@ def GetCoincidences(Glevel: LSGraph, nc: float = 1.0) -> np.ndarray:
 
 
 # ------------------------------------------------------------------ #
-def GetAdjacency() -> np.ndarray:
+def get_adjacency() -> np.ndarray:
     """Build the adjacency matrix A.
 
     A[i][j] is the branching ratio for the transition from gamma_i's
@@ -229,10 +229,10 @@ def GetAdjacency() -> np.ndarray:
     A = np.zeros((n, n), dtype=float)
 
     for level in levels:
-        for inGamma in level.outGammas:
+        for inGamma in level.out_gammas:
             i = gammaIDs[inGamma.gE]
             fl = levelIDs[inGamma.ExB]   # O(1) dict lookup
-            for outGamma in levels[fl].outGammas:
+            for outGamma in levels[fl].out_gammas:
                 j = gammaIDs[outGamma.gE]
                 A[i, j] = outGamma.BR
 
@@ -240,11 +240,11 @@ def GetAdjacency() -> np.ndarray:
 
 
 # ------------------------------------------------------------------ #
-def Print_Level_Scheme() -> None:
+def print_level_scheme() -> None:
     """Print all levels and their outgoing gamma transitions to stdout."""
     for level in levels:
         print(f"Level: {level.ExE}")
-        for gam in level.outGammas:
+        for gam in level.out_gammas:
             print(f"  Gamma: {gam.gE} keV  BR: {gam.BR:.4f}  Final state: {gam.ExB}")
 
 
@@ -347,6 +347,6 @@ def _add_ghost_levels() -> None:
 def _make_vertices() -> None:
     """Build the vertices adjacency dictionary used by LSGraph."""
     for lvl in levels:
-        vlist = [gam.ExB for gam in lvl.outGammas]
+        vlist = [gam.ExB for gam in lvl.out_gammas]
         if vlist:
             vertices[lvl.ExE] = vlist

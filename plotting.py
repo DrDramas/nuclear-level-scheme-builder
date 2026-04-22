@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Plotting.py
+plotting.py
 
 Graphical layout and drawing routines for nuclear level scheme and
 transition scheme graphs built with NetworkX.
