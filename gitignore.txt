@@ -56,6 +56,5 @@ Thumbs.db
 # Data files (uncomment if you don't want .gam files tracked)
 # *.gam
 
-# Output files
-*.png
-*.gif
+# README figures
+/images
