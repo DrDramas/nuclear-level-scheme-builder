@@ -7,7 +7,7 @@ A toolkit for parsing evaluated nuclear data files, constructing gamma-ray decay
 ### Installation
 
 ```bash
-git clone https://github.com/<your-username>/scheme-builder-tools.git
+git clone https://github.com/DrDramas/scheme-builder-tools.git
 cd scheme-builder-tools
 pip install -r requirements.txt
 ```
