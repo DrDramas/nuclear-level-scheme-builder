@@ -1,4 +1,4 @@
-# scheme-builder-tools
+# Nuclear Level Scheme Builder
 
 A toolkit for parsing evaluated nuclear data files, constructing gamma-ray decay scheme graphs, and computing the Singles (S), Coincidence (C), and Adjacency (A) matrices used for numerical optimization of nuclear level schemes.
 
